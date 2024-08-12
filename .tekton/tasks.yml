@@ -1,3 +1,37 @@
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+name: cleanup
+spec:
+  workspaces:
+  - name: source
+  steps:
+  - name: remove
+    image: alpine:3
+    workingDir: $(workspaces.source.path)
+    script: |  # Multi-line script for clarity
+      #!/usr/bin/env sh
+      set -eu
+
+      echo "Removing all files from ${WORKSPACE_SOURCE_PATH} ..."
+
+      # Improved safety checks before deletion
+      if [ -d "${WORKSPACE_SOURCE_PATH}" ] ; then
+        # Ensure the path is within the expected workspace directory
+        if [[ "${WORKSPACE_SOURCE_PATH}" == /* ]]; then
+          echo "Error: WORKSPACE_SOURCE_PATH points outside the allowed directory. Aborting cleanup!"
+          exit 1
+        fi
+
+        # Delete non-hidden files and directories
+        rm -rf "${WORKSPACE_SOURCE_PATH}"/*
+        # Delete files and directories starting with . but excluding ..
+        rm -rf "${WORKSPACE_SOURCE_PATH}"/.[!.]*
+        # Delete files and directories starting with .. plus any other character
+        rm -rf "${WORKSPACE_SOURCE_PATH}"/..?*
+      fi
+
+---
 apiVersion: tekton.dev/v1beta1
 kind: Task
 name: nose
